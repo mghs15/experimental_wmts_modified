@@ -3,9 +3,11 @@
 地理院タイル（ラスタタイル）のWMTSメタデータ作成ツールを改造しました。
 
 地理院地図のlayers.txtを読みにいくもの
+
 https://mghs15.github.io/experimental_wmts_mofdified/
 
 ローカルののlayers.txtを読みにいくもの
+
 https://mghs15.github.io/experimental_wmts_mofdified/index_local.html
 
 
