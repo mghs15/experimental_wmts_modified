@@ -1,0 +1,273 @@
+<!doctype html>
+<html>
+<head>
+		<meta charset="UTF-8">
+		<title>WMTSメタデータ作成ツール</title>
+		<style>
+				body {padding: 0; margin: 0}
+				      html, body {height: 100%; width: 100%;}
+				      .scr {
+				       font-size: 14px; 
+				       width: 100%;
+				       height: 100%;
+				       background-color: #fff;
+				      }
+				      .setumei {
+				       margin:10px;
+				       padding:10px;
+				      }
+		</style>
+</head>
+<body>
+		<div class="scr">
+				<div class="setumei"> 
+					<textarea name='tilecp' id='tilecp' cols="100" rows="25" readonly="readonly">
+					</textarea> 
+					<button type="button" id="copy-button">選択＆コピー</button>
+				</div>
+		</div>
+		<script>
+
+				//190615
+				var xhr = new XMLHttpRequest();
+				xhr.open('GET', "./layers_txt/layers.txt", false);
+				xhr.send(null);
+				var layerarrayTest = JSON.parse("{\"layers\": " + xhr.responseText + "}");
+				console.log(layerarrayTest);
+				var layersTxtLength = layerarrayTest.layers.length;
+				var layerarray = [];
+				for (var i = 0; i < layersTxtLength; i++) {
+					var iLayersUrl = layerarrayTest.layers[i].url
+					iLayersUrl = iLayersUrl.replace('\./', '\./layers_txt/');
+					layerarray.push(iLayersUrl);
+				}
+				console.log(layerarray);
+
+/* 190615
+				var layerarray = ['./layers_txt/layers1.txt',
+						'./layers_txt/layers2.txt',
+						'./layers_txt/layers3.txt',
+						'./layers_txt/layers4.txt',
+						'./layers_txt/layers5.txt',
+						'./layers_txt/layers_skhb.txt',
+						'./layers_txt/layers_invisible.txt',
+						'./layers_txt/layers_experimental.txt',
+						'./layers_txt/layers_antarctic.txt'
+				];
+*/
+
+
+				var outxml = '<?xml version="1.0" encoding="UTF-8"?>' + "\n";
+				outxml += '<Capabilities xmlns="http://www.opengis.net/wmts/1.0" xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml" xsi:schemaLocation="http://www.opengis.net/wmts/1.0 http://schemas.opengis.net/wmts/1.0/wmtsGetCapabilities_response.xsd" version="1.0.0">' + "\n";;
+				outxml += '<Contents>' + "\n";
+
+				var outTileMatrix = [];
+
+				var ScaleDenominator = {
+						zoom0: 559082264.0287178,
+						zoom1: 279541132.0143589,
+						zoom2: 139770566.0071794,
+						zoom3: 69885283.00358972,
+						zoom4: 34942641.50179486,
+						zoom5: 17471320.75089743,
+						zoom6: 8735660.375448715,
+						zoom7: 4367830.187724357,
+						zoom8: 2183915.093862179,
+						zoom9: 1091957.546931089,
+						zoom10: 545978.7734655447,
+						zoom11: 272989.3867327723,
+						zoom12: 136494.6933663862,
+						zoom13: 68247.34668319309,
+						zoom14: 34123.67334159654,
+						zoom15: 17061.83667079827,
+						zoom16: 8530.918335399136,
+						zoom17: 4265.459167699568,
+						zoom18: 2132.729583849784
+				};
+
+				var ljson = [{
+								title: "標準地図",
+								id: "std",
+								url: "https://maps.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+								minZoom: 2,
+								maxNativeZoom: 18
+						},
+						{
+								title: "淡色地図",
+								id: "pale",
+								url: "https://maps.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png",
+								minZoom: 2,
+								maxNativeZoom: 18
+						},
+						{
+								title: "白地図",
+								id: "blank",
+								url: "https://maps.gsi.go.jp/xyz/blank/{z}/{x}/{y}.png",
+								minZoom: 5,
+								maxNativeZoom: 14
+						},
+						{
+								title: "English",
+								id: "english",
+								url: "https://maps.gsi.go.jp/xyz/english/{z}/{x}/{y}.png",
+								minZoom: 5,
+								maxNativeZoom: 8
+						},
+						{
+								title: "写真",
+								id: "ort",
+								url: "https://maps.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+								minZoom: 2,
+								maxNativeZoom: 18
+						}
+				];
+
+
+				function layersearch(layerdata, parent) {
+						if (!layerdata) return;
+						for (var i = 0; i < layerdata.length; i++) {
+								if (parent) {
+										layerdata[i].title = parent.title + "_" + layerdata[i].title;
+								}
+								if (layerdata[i].src) {
+										if (layerdata[i].src.indexOf("//") < 0) {
+												if ((layerdata[i].src.indexOf("./") == 0) && (layerdata[i].src.match(/\?|#/) == null)) {
+														layerdata[i].src = "https://maps.gsi.go.jp/layers_txt/" + layerdata[i].src.substring(2);
+												} else {
+														continue;
+												}
+										}
+										var xhr = new XMLHttpRequest();
+										xhr.open('GET', layerdata[i].src, false);
+										xhr.send(null);
+										var result = JSON.parse(xhr.responseText);
+										layersearch(result.layers, layerdata[i]);
+								}
+								if (layerdata[i].type == "Layer") {
+										layerdata[i].url = layerdata[i].url.split("?")[0] //190615 .split("?")[0] 追加
+										if ((layerdata[i].id != "red") &&
+											(layerdata[i].id != "oosimared") &&
+											(layerdata[i].id != "miyakejimared") &&
+											(layerdata[i].id != "20180309_sekisyokurittai_kirishima") &&
+											(layerdata[i].id != "2018_sekisyokurittai_azumayama") &&
+											(layerdata[i].id != "tarumaered") &&
+											(layerdata[i].id != "20180130_kusatsushiranesan_sekishokurittai") &&
+											(layerdata[i].id != "20180906hokkaido_atsuma_sekishoku") &&
+											(layerdata[i].id != "kuchinoerabured") &&
+											(layerdata[i].id != "20190121_olsorittai_kusatsushiranesan") &&
+											(layerdata[i].id != "20190121_sekisyokurittai_kusatsushiranesan") &&
+											(layerdata[i].id != "20180130_kusatsushiranesan_sekishokurittai") &&
+											((layerdata[i].url.match(/\{y\}\.jpg$/) || layerdata[i].url.match(/\{y\}\.png$/)))) {
+												if (!layerdata[i].maxNativeZoom) {
+														if (!layerdata[i].maxZoom) {
+																layerdata[i].maxNativeZoom = 18;
+														} else {
+																layerdata[i].maxNativeZoom = layerdata[i].maxZoom;
+														}
+												}
+												if (!layerdata[i].minZoom) {
+														layerdata[i].minZoom = 2;
+												}
+												ljson[ljson.length] = {
+														title: layerdata[i].title,
+														id: layerdata[i].id,
+														url: layerdata[i].url,
+														minZoom: layerdata[i].minZoom,
+														maxNativeZoom: layerdata[i].maxNativeZoom
+												};
+										}
+								}
+								layersearch(layerdata[i].entries, layerdata[i]);
+						}
+				}
+
+				function escapesp(src) {
+						if (!src) return;
+						var mk = {
+								"<": "&lt;",
+								">": "&gt;",
+								"\"": "&quot;",
+								"&": "&amp;"
+						};
+						return src.replace(/[<>]/g, function (mt) {
+								return mk[mt];
+						});
+				}
+
+				for (var ti = 0; ti < layerarray.length; ti++) {
+
+						var xhr = new XMLHttpRequest();
+						xhr.open('GET', layerarray[ti], false);
+						xhr.send(null);
+						var result = JSON.parse(xhr.responseText);
+						layersearch(result.layers, null);
+
+				}
+
+
+				for (var i = 0; i < ljson.length; i++) {
+						//ljson[i].url = ljson[i].url.split("?")[0]  //190615
+						var TileMatrixSet = ljson[i].minZoom + 'to' + ljson[i].maxNativeZoom;
+						if (outTileMatrix.indexOf(TileMatrixSet) == -1) {
+								outTileMatrix.push(TileMatrixSet);
+						}
+						var tileext;
+						if (ljson[i].url.match(/\{y\}\.png$/)) {
+								tileext = 'image/png';
+						} else {
+								tileext = 'image/jpeg';
+						}
+						ljson[i].url = ljson[i].url.replace('{z}/{x}/{y}', '{TileMatrix}/{TileCol}/{TileRow}');
+						outxml += '<Layer>' + "\n";
+						outxml += '<ows:Title>' + escapesp(ljson[i].title) + '</ows:Title>' + "\n";
+						outxml += '<ows:Identifier>' + ljson[i].id + '</ows:Identifier>' + "\n";
+						outxml += '<Style isDefault="true">' + "\n";
+						outxml += '<ows:Identifier>default</ows:Identifier>' + "\n";
+						outxml += '</Style>' + "\n";
+						outxml += '<Format>' + tileext + '</Format>' + "\n";
+						outxml += '<TileMatrixSetLink>' + "\n";
+						outxml += '<TileMatrixSet>z' + TileMatrixSet + '</TileMatrixSet>' + "\n";
+						outxml += '</TileMatrixSetLink>' + "\n";
+						outxml += '<ResourceURL format="' + tileext + '" resourceType="tile" template="' + ljson[i].url + '"/>' + "\n";
+						outxml += '</Layer>' + "\n";
+				}
+
+				for (var i = 0; i < outTileMatrix.length; i++) {
+						outxml += '<TileMatrixSet>' + "\n";
+						outxml += '<ows:Identifier>z' + outTileMatrix[i] + '</ows:Identifier>' + "\n";
+						outxml += '<ows:SupportedCRS>urn:ogc:def:crs:EPSG:6.18:3:3857</ows:SupportedCRS>' + "\n";
+
+						var zoom = outTileMatrix[i].split('to');
+						var minz = parseInt(zoom[0], 10);
+						var maxz = parseInt(zoom[1], 10);
+						for (var ii = minz; ii <= maxz; ii++) {
+								var Matrixsize = Math.pow(2, ii);
+								outxml += '<TileMatrix>' + "\n";
+								outxml += '<ows:Identifier>' + ii + '</ows:Identifier>' + "\n";
+								outxml += '<ScaleDenominator>' + ScaleDenominator["zoom" + ii] + '</ScaleDenominator>' + "\n";
+								outxml += '<TopLeftCorner>-20037508.34278925 20037508.34278925</TopLeftCorner>' + "\n";
+								outxml += '<TileWidth>256</TileWidth>' + "\n";
+								outxml += '<TileHeight>256</TileHeight>' + "\n";
+								outxml += '<MatrixWidth>' + Matrixsize + '</MatrixWidth>' + "\n";
+								outxml += '<MatrixHeight>' + Matrixsize + '</MatrixHeight>' + "\n";
+								outxml += '</TileMatrix>' + "\n";
+						}
+						outxml += '</TileMatrixSet>' + "\n";
+				}
+
+				outxml += '</Contents>' + "\n";
+				outxml += '</Capabilities>' + "\n";
+
+				tilecp.value = outxml;
+				
+				//190615
+				document.getElementById('copy-button').onclick = function(){
+					document.getElementById('tilecp').select();
+					document.execCommand("copy");
+					alert('コピーしました');
+				}
+				
+				
+		</script>
+</body>
+</html>
