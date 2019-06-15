@@ -38,7 +38,7 @@
 				var layerarray = [];
 				for (var i = 0; i < layersTxtLength; i++) {
 					var iLayersUrl = layerarrayTest.layers[i].url
-					iLayersUrl = iLayersUrl.replace('\./', 'https://maps.gsi.go.jp/layers_txt/');
+					iLayersUrl = iLayersUrl.replace('\./', '\./layers_txt/');
 					layerarray.push(iLayersUrl);
 				}
 				console.log(layerarray);
